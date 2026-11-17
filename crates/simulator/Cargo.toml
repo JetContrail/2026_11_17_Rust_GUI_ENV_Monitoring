@@ -1,0 +1,25 @@
+[package]
+name = "envmon-simulator"
+description = "Virtual hardware: card readers, doors, environment sensors, key cabinets and PDUs over encrypted links."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "envmon-sim"
+path = "src/main.rs"
+
+[dependencies]
+envmon-core.workspace = true
+envmon-protocol.workspace = true
+chrono.workspace = true
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+
+[lints]
+workspace = true

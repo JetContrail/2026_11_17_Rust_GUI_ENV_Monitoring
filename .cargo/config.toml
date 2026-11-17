@@ -1,0 +1,4 @@
+[env]
+# MinGW-w64 headers default to Windows XP, hiding APIs the bundled SQLite uses
+# (GetTickCount64). Target Windows 10.
+CFLAGS_x86_64_pc_windows_gnu = "-D_WIN32_WINNT=0x0A00"
