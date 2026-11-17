@@ -9,10 +9,35 @@ rust-version = "1.95"
 repository = "https://github.com/JetContrail/2026_11_17_Rust_GUI_ENV_Monitoring"
 
 [workspace.dependencies]
-envmon-core = { path = "crates/envmon-core" }
+envmon-core = { path = "crates/core" }
+envmon-protocol = { path = "crates/protocol" }
+envmon-simulator = { path = "crates/simulator" }
+envmon-api = { path = "crates/api" }
+
+aes-gcm = "0.10"
+axum = "0.8"
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
+clap = { version = "4", features = ["derive"] }
+criterion = { version = "0.8", default-features = false, features = ["cargo_bench_support"] }
 eframe = "0.37"
 egui = "0.37"
 egui_kittest = "0.37"
+getrandom = "0.3"
+hkdf = "0.12"
+http-body-util = "0.1"
+hyper = "1"
+hyper-util = { version = "0.1", features = ["server-auto", "service", "tokio"] }
+rcgen = { version = "0.14", default-features = false, features = ["crypto", "pem", "ring"] }
+rusqlite = { version = "0.43", features = ["bundled", "chrono"] }
+rustls = { version = "0.23", default-features = false, features = ["logging", "ring", "std"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+subtle = "2"
+thiserror = "2"
+tokio = { version = "1", features = ["io-util", "macros", "net", "rt-multi-thread", "sync", "time"] }
+tokio-rustls = { version = "0.26", default-features = false, features = ["logging", "ring"] }
+tower = { version = "0.5", features = ["util"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
@@ -24,6 +49,10 @@ expect_used = "warn"
 panic = "warn"
 dbg_macro = "warn"
 todo = "warn"
+
+# The bundled SQLite C code is slow at -O0; optimise it even in dev/test builds.
+[profile.dev.package.libsqlite3-sys]
+opt-level = 3
 
 [profile.release]
 lto = "thin"

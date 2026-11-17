@@ -34,6 +34,10 @@ jobs:
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: cargo test
         run: cargo test --workspace --locked
+      - name: Performance tests (release)
+        run: cargo test -p envmon-core --release --locked --test performance -- --nocapture
+      - name: Benchmarks compile
+        run: cargo bench --workspace --locked --no-run
 
   windows-gnu-cross:
     name: Cross build x86_64-pc-windows-gnu (ubuntu-latest)
@@ -51,11 +55,14 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gcc-mingw-w64-x86-64
       - name: cargo build (windows-gnu, release)
         run: cargo build --workspace --release --locked --target x86_64-pc-windows-gnu
-      - name: Upload envmon.exe
+      - name: Upload executables
         uses: actions/upload-artifact@v4
         with:
           name: envmon-windows-gnu-x64
-          path: target/x86_64-pc-windows-gnu/release/envmon.exe
+          path: |
+            target/x86_64-pc-windows-gnu/release/envmon.exe
+            target/x86_64-pc-windows-gnu/release/envmon-sim.exe
+            target/x86_64-pc-windows-gnu/release/envmon-api.exe
           if-no-files-found: error
 
   windows-msvc:
@@ -70,9 +77,12 @@ jobs:
         run: cargo test --workspace --locked
       - name: cargo build (release)
         run: cargo build --workspace --release --locked
-      - name: Upload envmon.exe
+      - name: Upload executables
         uses: actions/upload-artifact@v4
         with:
           name: envmon-windows-msvc-x64
-          path: target/release/envmon.exe
+          path: |
+            target/release/envmon.exe
+            target/release/envmon-sim.exe
+            target/release/envmon-api.exe
           if-no-files-found: error

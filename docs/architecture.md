@@ -12,11 +12,11 @@ flowchart LR
         O[ゲートコントローラ / 鍵保管器 / 環境監視 / PDU]
     end
     subgraph App[envmon.exe 単一バイナリ]
-        N[envmon-net<br/>TLS・再接続・DeviceAdapter]
+        N[envmon-protocol<br/>TLS 1.3 / AES-256-GCM・機器トレイト]
         C[envmon-core<br/>照合・扉状態・アラーム・ルール]
-        S[envmon-store<br/>SQLite]
+        S[SQLite<br/>envmon-core::store]
         V[envmon-screen<br/>レイアウト・Lua]
-        G[envmon-app<br/>監視運用 / 画面作成モード]
+        G[envmon-gui<br/>監視運用 / 画面作成モード]
         A[envmon-api<br/>REST HTTPS・RBAC]
     end
     Cloud[上位クラウド]
@@ -33,14 +33,12 @@ flowchart LR
 
 | クレート | 役割 | フェーズ |
 |----------|------|----------|
-| `envmon-core` | ドメインモデル (ユーザ・カード・扉・権限・スケジュール)、照合、扉状態機械、アラーム、ルールエンジン。時刻は注入してテストする | P1〜 |
-| `envmon-proto` | 自前電文のエンコード / デコード | P1 |
-| `envmon-net` | tokio + rustls の TLS 接続、自動再接続、`DeviceAdapter` トレイトと機器種別ごとの実装 | P1〜 |
-| `envmon-store` | SQLite への履歴・マスタ保存、起動時のメモリ索引構築 | P1 |
-| `envmon-screen` | レイアウト JSON の読み書き、下絵 (GIF / JPEG) の読込、Lua 実行 (`mlua`、Lua 5.4 同梱ビルド)、オブジェクトの表示内容算出 | P1 |
-| `envmon-sim` | 機器シミュレータ (TLS サーバ)。結合テストと手動デモに使う | P1〜 |
-| `envmon-api` | REST API (HTTPS)、RBAC | P5 |
-| `envmon-app` | eframe / egui の GUI (`envmon` バイナリ)、警告音 | P1〜 |
+| `envmon-core` (`crates/core`) | ドメインモデル (ユーザ・カード・扉・権限・スケジュール)、照合 (メモリ索引)、SQLite 保存 (旧 `envmon-store`)、扉状態機械、アラーム、ルールエンジン、オブジェクト状態。時刻は注入してテストする | P1〜 |
+| `envmon-protocol` (`crates/protocol`) | 自前電文 (カードリーダ枠 + JSON メッセージ)、TLS 1.3 相互認証、AES-256-GCM レコード、機器トレイト、ホスト側処理 (旧 `envmon-proto` / `envmon-net`) | P1〜 |
+| `envmon-screen` | レイアウト JSON の読み書き、下絵 (GIF / JPEG) の読込、Lua 実行 (`mlua`、Lua 5.4 同梱ビルド)、オブジェクトの表示内容算出 | P1 (未着手) |
+| `envmon-simulator` (`crates/simulator`) | 仮想機器 (ライブラリ + `envmon-sim` CLI)。結合テストと手動デモに使う | P1〜 |
+| `envmon-api` (`crates/api`) | REST API (HTTPS)、Bearer トークン + RBAC | P5 (基盤は先行実装) |
+| `envmon-gui` (`crates/gui`) | eframe / egui の GUI (`envmon` バイナリ)、警告音 | P1〜 |
 
 GUI 以外のクレートは Windows 固有 API を使わず、Linux CI でもテストできる。
 

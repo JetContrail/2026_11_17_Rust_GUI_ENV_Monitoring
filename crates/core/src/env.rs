@@ -1,12 +1,21 @@
-//! GUI-independent domain logic for environment monitoring.
-//!
-//! Nothing in this crate depends on a GUI framework, so it can be unit tested
-//! on any host (including headless CI runners).
+//! Threshold classification of environmental readings (temperature, humidity, ...).
 
 use std::fmt;
 
 /// Severity of a measured value relative to its limits.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Default,
+    serde::Serialize,
+    serde::Deserialize,
+)]
+#[serde(rename_all = "snake_case")]
 pub enum Level {
     #[default]
     Normal,

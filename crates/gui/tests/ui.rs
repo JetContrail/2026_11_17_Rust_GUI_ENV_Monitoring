@@ -2,8 +2,8 @@
 
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
-use envmon_app::{CLEAR_BUTTON, MonitorApp, SIMULATE_BUTTON};
 use envmon_core::Level;
+use envmon_gui::{CLEAR_BUTTON, MonitorApp, SIMULATE_BUTTON};
 
 fn harness() -> Harness<'static, MonitorApp> {
     Harness::new_ui_state(

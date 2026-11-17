@@ -1,6 +1,6 @@
 [package]
-name = "envmon-app"
-description = "egui/eframe desktop GUI for the environment monitor."
+name = "envmon-gui"
+description = "Windows GUI (egui/eframe) for the integrated access-control and environment monitor."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

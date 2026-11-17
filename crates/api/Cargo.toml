@@ -1,0 +1,35 @@
+[package]
+name = "envmon-api"
+description = "HTTPS REST WebAPI with bearer-token RBAC for cloud and third-party integration."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "envmon-api"
+path = "src/main.rs"
+
+[dependencies]
+envmon-core.workspace = true
+envmon-protocol.workspace = true
+axum.workspace = true
+chrono.workspace = true
+clap.workspace = true
+getrandom.workspace = true
+hyper-util.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+subtle.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tokio-rustls.workspace = true
+
+[dev-dependencies]
+http-body-util.workspace = true
+tower.workspace = true
+
+[lints]
+workspace = true
