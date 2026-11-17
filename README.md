@@ -13,8 +13,9 @@ GUI フレームワークは **egui (eframe)** を採用。即時モード GUI �
 
 ## 設計資料
 
-- [要求仕様 (案)](docs/requirements.md)
-- [アーキテクチャ (案)](docs/architecture.md)
+- [仕様書 (PO 提示)](docs/spec.md)
+- [要求仕様 (実装上の解釈・前提・フェーズ)](docs/requirements.md)
+- [アーキテクチャ](docs/architecture.md)
 
 ## 開発環境 (Linux / Ubuntu 22.04 で確認)
 
