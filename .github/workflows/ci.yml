@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  lint-test:
+    name: fmt / clippy / test (ubuntu-latest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo fmt
+        run: cargo fmt --all -- --check
+      - name: cargo clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: cargo test
+        run: cargo test --workspace --locked
+
+  windows-gnu-cross:
+    name: Cross build x86_64-pc-windows-gnu (ubuntu-latest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-gnu
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: windows-gnu
+      - name: Install MinGW-w64
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gcc-mingw-w64-x86-64
+      - name: cargo build (windows-gnu, release)
+        run: cargo build --workspace --release --locked --target x86_64-pc-windows-gnu
+      - name: Upload envmon.exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: envmon-windows-gnu-x64
+          path: target/x86_64-pc-windows-gnu/release/envmon.exe
+          if-no-files-found: error
+
+  windows-msvc:
+    name: Build & test x86_64-pc-windows-msvc (windows-latest)
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo test
+        run: cargo test --workspace --locked
+      - name: cargo build (release)
+        run: cargo build --workspace --release --locked
+      - name: Upload envmon.exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: envmon-windows-msvc-x64
+          path: target/release/envmon.exe
+          if-no-files-found: error

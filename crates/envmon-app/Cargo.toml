@@ -1,0 +1,23 @@
+[package]
+name = "envmon-app"
+description = "egui/eframe desktop GUI for the environment monitor."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "envmon"
+path = "src/main.rs"
+
+[dependencies]
+envmon-core.workspace = true
+eframe.workspace = true
+egui.workspace = true
+
+[dev-dependencies]
+egui_kittest.workspace = true
+
+[lints]
+workspace = true
