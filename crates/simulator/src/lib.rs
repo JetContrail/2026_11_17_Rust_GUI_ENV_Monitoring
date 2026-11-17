@@ -22,7 +22,7 @@ use envmon_protocol::device::{
     CardReader, DeviceError, ElectricLock, EnvironmentMonitor, KeyCabinet, Pdu,
 };
 use envmon_protocol::frame::ReaderFrame;
-use envmon_protocol::host::{Clock, HostConfig, ServeError, serve_link};
+use envmon_protocol::host::{Clock, HostConfig, LinkScope, ServeError, serve_link};
 use envmon_protocol::message::{Downlink, Quantity, Uplink};
 use envmon_protocol::tls::{self, DevCa, TlsAcceptor, TlsConnector, TlsError};
 use envmon_protocol::transport::{Link, LinkError};
@@ -209,6 +209,21 @@ pub struct VirtualSite {
 }
 
 impl VirtualSite {
+    /// The host-side scope for a link carrying all of this site's devices.
+    pub fn scope(&self) -> LinkScope {
+        LinkScope {
+            readers: self.readers.keys().copied().collect(),
+            doors: self.locks.keys().copied().collect(),
+            cabinets: self.key_cabinets.keys().copied().collect(),
+            objects: self
+                .environment
+                .objects()
+                .chain(self.pdu.objects())
+                .chain(self.key_cabinets.values().map(|(object, _)| *object))
+                .collect(),
+        }
+    }
+
     pub fn demo(now: Instant) -> Self {
         let mut environment = VirtualEnvironment::default();
         environment.add_analog(TEMPERATURE, Quantity::TemperatureC, 22.0);
@@ -408,7 +423,10 @@ pub async fn run_scenario(
     let listener = TcpListener::bind("127.0.0.1:0").await?;
     let addr = listener.local_addr()?;
     let host_clock: Arc<dyn Clock> = Arc::new(clock.clone());
-    let config = HostConfig::default();
+    let config = HostConfig {
+        scope: site.scope(),
+        ..HostConfig::default()
+    };
     let host_system = Arc::clone(&system);
 
     let reports = match transport {

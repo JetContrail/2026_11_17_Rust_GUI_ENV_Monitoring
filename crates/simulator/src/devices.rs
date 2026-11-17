@@ -109,6 +109,14 @@ impl VirtualEnvironment {
         self.analog.insert(object, (quantity, value));
     }
 
+    pub fn objects(&self) -> impl Iterator<Item = ObjectId> + '_ {
+        self.analog
+            .keys()
+            .chain(self.inputs.keys())
+            .chain(self.outputs.keys())
+            .copied()
+    }
+
     pub fn set_analog(&mut self, object: ObjectId, value: f32) -> Result<Quantity, DeviceError> {
         let entry = self
             .analog
@@ -185,6 +193,10 @@ pub struct VirtualPdu {
 impl VirtualPdu {
     pub fn add_outlet(&mut self, object: ObjectId, watts: f32) {
         self.outlets.insert(object, (true, watts));
+    }
+
+    pub fn objects(&self) -> impl Iterator<Item = ObjectId> + '_ {
+        self.outlets.keys().copied()
     }
 
     pub fn set_load(&mut self, object: ObjectId, on: bool, watts: f32) {

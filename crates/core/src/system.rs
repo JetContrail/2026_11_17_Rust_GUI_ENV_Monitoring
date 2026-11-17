@@ -210,6 +210,15 @@ impl System {
         std::mem::take(&mut self.commands)
     }
 
+    /// Takes only the queued commands matching `pred` (e.g. those addressed to one device
+    /// link); the rest stay queued in order.
+    pub fn take_commands_where(
+        &mut self,
+        mut pred: impl FnMut(&ControlCommand) -> bool,
+    ) -> Vec<ControlCommand> {
+        self.commands.extract_if(.., |c| pred(c)).collect()
+    }
+
     /// A card was read at `reader`: authorize, unlock and record.
     pub fn card_presented(
         &mut self,
