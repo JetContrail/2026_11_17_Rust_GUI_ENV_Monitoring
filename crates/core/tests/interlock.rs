@@ -16,6 +16,7 @@ fn system() -> System {
     System::new(site.directory, site.rules, site.doors)
         .unwrap()
         .with_store(Store::open_in_memory().unwrap())
+        .unwrap()
 }
 
 fn interlock(rule: u32) -> DenyReason {
@@ -115,4 +116,28 @@ fn rack_and_key_cabinet_open_after_room_entry_within_window() {
             .unwrap()
             .is_granted()
     );
+}
+
+#[test]
+fn access_history_survives_restart() {
+    let path = std::env::temp_dir().join(format!("envmon-history-{}.db", std::process::id()));
+    let _ = std::fs::remove_file(&path);
+    let open = || {
+        let site = demo::site(10);
+        System::new(site.directory, site.rules, site.doors)
+            .unwrap()
+            .with_store(Store::open(&path).unwrap())
+            .unwrap()
+    };
+    let mut sys = open();
+    let at = demo::epoch() + chrono::TimeDelta::days(1);
+    sys.card_presented(demo::ROOM_READER, demo::card(1), at, std::time::Instant::now())
+        .unwrap();
+    drop(sys);
+    let sys = open();
+    let restored: Vec<_> = sys.history().collect();
+    assert_eq!(restored.len(), 1);
+    assert_eq!(restored[0].point, AccessPoint::Door(demo::ROOM_DOOR));
+    drop(sys);
+    let _ = std::fs::remove_file(&path);
 }

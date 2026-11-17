@@ -143,10 +143,12 @@ impl System {
         Ok(system)
     }
 
-    /// Persists access history and user changes to `store`.
-    pub fn with_store(mut self, store: Store) -> Self {
+    /// Persists access history and user changes to `store`, and resumes the in-memory
+    /// history from the records already stored.
+    pub fn with_store(mut self, store: Store) -> Result<Self, SystemError> {
+        self.history = store.recent_access(HISTORY_CAPACITY)?.into_iter().rev().collect();
         self.store = Some(store);
-        self
+        Ok(self)
     }
 
     pub fn directory(&self) -> &UserDirectory {
