@@ -1,6 +1,6 @@
-# アーキテクチャ v0.2
+# アーキテクチャ v1.0
 
-ステータス: **PO 確認待ち**。[spec.md](spec.md) と [requirements.md](requirements.md) の推奨案を前提にしている。
+ステータス: **PO 承認済み** (2026-11-17)。[spec.md](spec.md) と [requirements.md](requirements.md) の決定事項に基づく。
 
 ## 1. 全体構成
 
@@ -15,7 +15,7 @@ flowchart LR
         N[envmon-net<br/>TLS・再接続・DeviceAdapter]
         C[envmon-core<br/>照合・扉状態・アラーム・ルール]
         S[envmon-store<br/>SQLite]
-        V[envmon-screen<br/>レイアウト・Rhai]
+        V[envmon-screen<br/>レイアウト・Lua]
         G[envmon-app<br/>監視運用 / 画面作成モード]
         A[envmon-api<br/>REST HTTPS・RBAC]
     end
@@ -37,7 +37,7 @@ flowchart LR
 | `envmon-proto` | 自前電文のエンコード / デコード | P1 |
 | `envmon-net` | tokio + rustls の TLS 接続、自動再接続、`DeviceAdapter` トレイトと機器種別ごとの実装 | P1〜 |
 | `envmon-store` | SQLite への履歴・マスタ保存、起動時のメモリ索引構築 | P1 |
-| `envmon-screen` | レイアウト JSON の読み書き、Rhai 実行、オブジェクトの表示内容算出 | P1 |
+| `envmon-screen` | レイアウト JSON の読み書き、下絵 (GIF / JPEG) の読込、Lua 実行 (`mlua`、Lua 5.4 同梱ビルド)、オブジェクトの表示内容算出 | P1 |
 | `envmon-sim` | 機器シミュレータ (TLS サーバ)。結合テストと手動デモに使う | P1〜 |
 | `envmon-api` | REST API (HTTPS)、RBAC | P5 |
 | `envmon-app` | eframe / egui の GUI (`envmon` バイナリ)、警告音 | P1〜 |
@@ -98,19 +98,20 @@ stateDiagram-v2
 ## 5. 監視画面 (UI-1〜4)
 
 - 監視運用モードと画面作成モードを同一バイナリで切り替える
-- 下絵は PNG / JPEG (`image`)、SVG (`resvg` でラスタ化)。ズーム・パンとフロア / エリアの階層切替を持つ
+- 下絵は GIF / JPEG (`image` クレートの `gif` / `jpeg` 機能のみ有効化。アニメーション GIF は先頭フレーム)。ズーム・パンとフロア / エリアの階層切替を持つ
+- 監視運用時の操作は下絵上のオブジェクトで行う (UI-5)。クリックで詳細表示、右クリックメニューから遠隔解錠・アラーム確認など。オブジェクトの位置は下絵の画素座標で持ち、ズーム・パン後も下絵と一緒に動く
 - レイアウト JSON: 階層、下絵、オブジェクト (種別・位置・通信 ID・表示スクリプト)
-- 表示スクリプト (Rhai) がオブジェクトの状態から表示内容を返す。GUI はその結果を描くだけで、顧客ごとのコード変更はしない
+- 表示スクリプト (Lua) がオブジェクトの状態から表示内容を返す。GUI はその結果を描くだけで、顧客ごとのコード変更はしない
 
-```rhai
-fn door(state) {
-    if state.alarm { #{ icon: "door_open", color: "red", blink: true } }
-    else if state.open { #{ icon: "door_open", color: "orange" } }
-    else { #{ icon: "door_closed", color: "green" } }
-}
+```lua
+function door(state)
+  if state.alarm then return { icon = "door_open", color = "red", blink = true }
+  elseif state.open then return { icon = "door_open", color = "orange" }
+  else return { icon = "door_closed", color = "green" } end
+end
 ```
 
-- スクリプトには操作回数の上限を設け、ファイル・ネットワークへのアクセスを与えない。エラー時は既定の表示に戻し、アラーム一覧にスクリプトエラーを出す
+- Lua の標準ライブラリは `base` / `string` / `table` / `math` だけを読み込み、`io` / `os` / `package` / `debug` は与えない。命令数フックとメモリ上限で暴走を止める。エラー時は既定の表示に戻し、アラーム一覧にスクリプトエラーを出す
 - PF-2 (5,000 オブジェクト 30 fps) のため、スクリプトは状態が変わったオブジェクトだけ再評価し、画面外のオブジェクトは描かない
 
 ## 6. 通信 (NW-1)
