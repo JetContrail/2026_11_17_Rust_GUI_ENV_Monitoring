@@ -423,8 +423,18 @@ pub async fn run_scenario(
     let listener = TcpListener::bind("127.0.0.1:0").await?;
     let addr = listener.local_addr()?;
     let host_clock: Arc<dyn Clock> = Arc::new(clock.clone());
+    // Steps may introduce virtual inputs and outlets, so their objects belong to the link too.
+    let mut scope = site.scope();
+    scope
+        .objects
+        .extend(scenario.steps.iter().filter_map(|step| match step {
+            Step::Analog { object, .. }
+            | Step::DigitalInput { object, .. }
+            | Step::Outlet { object, .. } => Some(*object),
+            _ => None,
+        }));
     let config = HostConfig {
-        scope: site.scope(),
+        scope,
         ..HostConfig::default()
     };
     let host_system = Arc::clone(&system);

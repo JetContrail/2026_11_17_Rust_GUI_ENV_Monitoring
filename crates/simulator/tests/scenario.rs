@@ -157,3 +157,45 @@ fn scenarios_load_from_json() {
     .unwrap();
     assert_eq!(custom.steps.len(), 2);
 }
+
+#[tokio::test]
+async fn scenario_inputs_unknown_to_the_site_are_in_scope() {
+    let door_contact = envmon_core::model::ObjectId(400);
+    let mut sys = demo_system(10).unwrap();
+    sys.objects_mut()
+        .register(
+            door_contact,
+            envmon_core::objects::ObjectKind::DigitalInput,
+            "Rack door contact",
+        )
+        .unwrap();
+    let system = Arc::new(Mutex::new(sys));
+    let scenario = Scenario {
+        name: "contact".into(),
+        steps: vec![envmon_simulator::Step::DigitalInput {
+            object: door_contact,
+            on: true,
+        }],
+    };
+    let clock = SimClock::new(demo::epoch());
+    let mut site = VirtualSite::demo(Instant::now());
+    run_scenario(
+        Arc::clone(&system),
+        &mut site,
+        &clock,
+        &scenario,
+        Transport::Aes,
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        system
+            .lock()
+            .unwrap()
+            .objects()
+            .get(door_contact)
+            .unwrap()
+            .value,
+        ObjectValue::Digital { on: true }
+    );
+}
