@@ -66,14 +66,13 @@ async fn run(cli: Cli) -> Result<(), String> {
     let system = match &cli.db {
         Some(db) => {
             let mut store = Store::open(db).map_err(|e| e.to_string())?;
-            // Schedules and groups are site configuration and always written, so users saved
-            // without them still load; saved users (with any permission changes) win over the
-            // demo seed.
+            // Missing demo schedules and groups are seeded so users saved without them still
+            // load; saved master data and users (with any permission changes) are kept.
             for schedule in site.directory.schedules() {
-                store.save_schedule(schedule).map_err(|e| e.to_string())?;
+                store.seed_schedule(schedule).map_err(|e| e.to_string())?;
             }
             for group in site.directory.groups() {
-                store.save_group(group).map_err(|e| e.to_string())?;
+                store.seed_group(group).map_err(|e| e.to_string())?;
             }
             let directory = if store.user_count().map_err(|e| e.to_string())? > 0 {
                 store.load_directory().map_err(|e| e.to_string())?

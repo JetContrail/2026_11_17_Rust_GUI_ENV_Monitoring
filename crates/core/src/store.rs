@@ -102,6 +102,31 @@ impl Store {
         Ok(())
     }
 
+    /// Inserts `s` only if no schedule with its id exists; saved schedules are kept.
+    pub fn seed_schedule(&self, s: &Schedule) -> Result<(), StoreError> {
+        self.conn.execute(
+            "INSERT INTO schedules (id, name, weekly) VALUES (?1, ?2, ?3)
+             ON CONFLICT(id) DO NOTHING",
+            params![s.id.0, s.name, serde_json::to_string(&s.weekly)?],
+        )?;
+        Ok(())
+    }
+
+    /// Inserts `g` only if no group with its id exists; saved groups are kept.
+    pub fn seed_group(&self, g: &AccessGroup) -> Result<(), StoreError> {
+        self.conn.execute(
+            "INSERT INTO access_groups (id, name, doors, key_cabinets) VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(id) DO NOTHING",
+            params![
+                g.id.0,
+                g.name,
+                serde_json::to_string(&g.doors)?,
+                serde_json::to_string(&g.key_cabinets)?
+            ],
+        )?;
+        Ok(())
+    }
+
     /// Inserts or replaces users and their cards in a single transaction.
     pub fn save_users(&mut self, users: &[User]) -> Result<(), StoreError> {
         let tx = self.conn.transaction()?;
@@ -288,6 +313,22 @@ mod tests {
     use super::*;
     use crate::demo;
     use crate::model::DoorId;
+
+    #[test]
+    fn seeding_keeps_saved_master_data() {
+        let store = Store::open_in_memory().unwrap();
+        let site = demo::site(1);
+        let mut group = site.directory.groups().next().unwrap().clone();
+        group.doors.clear();
+        store.save_group(&group).unwrap();
+        for g in site.directory.groups() {
+            store.seed_group(g).unwrap();
+        }
+        let loaded = store.load_directory().unwrap();
+        let kept = loaded.groups().find(|g| g.id == group.id).unwrap();
+        assert!(kept.doors.is_empty());
+        assert_eq!(loaded.groups().count(), site.directory.groups().count());
+    }
 
     #[test]
     fn master_data_round_trips() {
