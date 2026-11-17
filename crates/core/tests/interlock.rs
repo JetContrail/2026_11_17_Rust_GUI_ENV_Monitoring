@@ -131,8 +131,13 @@ fn access_history_survives_restart() {
     };
     let mut sys = open();
     let at = demo::epoch() + chrono::TimeDelta::days(1);
-    sys.card_presented(demo::ROOM_READER, demo::card(1), at, std::time::Instant::now())
-        .unwrap();
+    sys.card_presented(
+        demo::ROOM_READER,
+        demo::card(1),
+        at,
+        std::time::Instant::now(),
+    )
+    .unwrap();
     drop(sys);
     let sys = open();
     let restored: Vec<_> = sys.history().collect();
