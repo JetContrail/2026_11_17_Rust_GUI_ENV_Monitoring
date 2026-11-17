@@ -66,7 +66,15 @@ async fn run(cli: Cli) -> Result<(), String> {
     let system = match &cli.db {
         Some(db) => {
             let mut store = Store::open(db).map_err(|e| e.to_string())?;
-            // Saved users (with any permission changes) win over the demo seed.
+            // Schedules and groups are site configuration and always written, so users saved
+            // without them still load; saved users (with any permission changes) win over the
+            // demo seed.
+            for schedule in site.directory.schedules() {
+                store.save_schedule(schedule).map_err(|e| e.to_string())?;
+            }
+            for group in site.directory.groups() {
+                store.save_group(group).map_err(|e| e.to_string())?;
+            }
             let directory = if store.user_count().map_err(|e| e.to_string())? > 0 {
                 store.load_directory().map_err(|e| e.to_string())?
             } else {
