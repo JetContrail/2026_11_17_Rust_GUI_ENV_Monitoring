@@ -11,6 +11,11 @@ Rust 製の鍵管理・環境監視プロトタイプ (Windows ネイティブ G
 
 GUI フレームワークは **egui (eframe)** を採用。即時モード GUI のため、カスタム描画 (`egui::Painter`) やマップ表示、スクリプト連携で状態を外部から操作する構成と相性がよく、`egui_kittest` によりウィンドウ / GPU なしで UI の操作テストができる。
 
+## 設計資料
+
+- [要求仕様 (案)](docs/requirements.md)
+- [アーキテクチャ (案)](docs/architecture.md)
+
 ## 開発環境 (Linux / Ubuntu 22.04 で確認)
 
 ```sh
