@@ -63,11 +63,22 @@ async fn run(cli: Cli) -> Result<(), String> {
         }
     };
     let site = demo::site(cli.users);
-    let mut system =
-        System::new(site.directory, site.rules, site.doors).map_err(|e| e.to_string())?;
-    if let Some(db) = &cli.db {
-        system = system.with_store(Store::open(db).map_err(|e| e.to_string())?);
-    }
+    let system = match &cli.db {
+        Some(db) => {
+            let mut store = Store::open(db).map_err(|e| e.to_string())?;
+            // Saved users (with any permission changes) win over the demo seed.
+            let directory = if store.user_count().map_err(|e| e.to_string())? > 0 {
+                store.load_directory().map_err(|e| e.to_string())?
+            } else {
+                demo::save(&site.directory, &mut store).map_err(|e| e.to_string())?;
+                site.directory
+            };
+            System::new(directory, site.rules, site.doors)
+                .and_then(|s| s.with_store(store))
+                .map_err(|e| e.to_string())?
+        }
+        None => System::new(site.directory, site.rules, site.doors).map_err(|e| e.to_string())?,
+    };
     let state = ApiState::new(Arc::new(Mutex::new(system)), tokens, Arc::new(SystemClock));
     let config = tls::https_server_config(&identity).map_err(|e| e.to_string())?;
     let listener = tokio::net::TcpListener::bind(cli.listen)
