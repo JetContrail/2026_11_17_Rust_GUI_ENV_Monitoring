@@ -128,6 +128,26 @@ pub async fn serve_link<S: AsyncRead + AsyncWrite + Unpin>(
     }
 }
 
+/// Advances door timers every `period` independently of device traffic, so a door left
+/// open on a link that has gone quiet still raises the open-too-long alarm. Runs until a
+/// tick fails.
+pub async fn run_timers(
+    system: Arc<Mutex<System>>,
+    clock: Arc<dyn Clock>,
+    period: std::time::Duration,
+) -> Result<(), SystemError> {
+    let mut interval = tokio::time::interval(period);
+    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+    loop {
+        interval.tick().await;
+        let (at, now) = clock.now();
+        system
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .tick(at, now)?;
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum ServeError {
     #[error(transparent)]
@@ -414,5 +434,45 @@ mod tests {
                 duration_ms: 5000
             })]
         );
+    }
+
+    struct ManualClock(Mutex<(NaiveDateTime, Instant)>);
+
+    impl Clock for ManualClock {
+        fn now(&self) -> (NaiveDateTime, Instant) {
+            *self.0.lock().unwrap()
+        }
+    }
+
+    #[tokio::test]
+    async fn timers_raise_open_too_long_without_device_traffic() {
+        let mut sys = system();
+        let (at, now) = (demo::epoch() + TimeDelta::days(1), Instant::now());
+        sys.remote_unlock(ROOM_DOOR, at, now).unwrap();
+        sys.door_sensor(ROOM_DOOR, true, at, now).unwrap();
+        let system = Arc::new(Mutex::new(sys));
+        let clock = Arc::new(ManualClock(Mutex::new((at, now))));
+        let timers = tokio::spawn(run_timers(
+            Arc::clone(&system),
+            clock.clone(),
+            std::time::Duration::from_millis(5),
+        ));
+        *clock.0.lock().unwrap() = (
+            at + TimeDelta::seconds(11),
+            now + std::time::Duration::from_secs(11),
+        );
+        let deadline = Instant::now() + std::time::Duration::from_secs(5);
+        loop {
+            let alarms = system.lock().unwrap().active_alarms().count();
+            if alarms > 0 {
+                break;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "no alarm raised by the timer task"
+            );
+            tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+        }
+        timers.abort();
     }
 }

@@ -11,7 +11,7 @@ use envmon_api::{ApiState, Role, router, server};
 use envmon_core::demo;
 use envmon_core::store::Store;
 use envmon_core::system::System;
-use envmon_protocol::host::SystemClock;
+use envmon_protocol::host::{SystemClock, run_timers};
 use envmon_protocol::tls::{self, DevCa, Identity};
 
 #[derive(Debug, Parser)]
@@ -79,7 +79,13 @@ async fn run(cli: Cli) -> Result<(), String> {
         }
         None => System::new(site.directory, site.rules, site.doors).map_err(|e| e.to_string())?,
     };
-    let state = ApiState::new(Arc::new(Mutex::new(system)), tokens, Arc::new(SystemClock));
+    let system = Arc::new(Mutex::new(system));
+    tokio::spawn(run_timers(
+        Arc::clone(&system),
+        Arc::new(SystemClock),
+        std::time::Duration::from_millis(200),
+    ));
+    let state = ApiState::new(system, tokens, Arc::new(SystemClock));
     let config = tls::https_server_config(&identity).map_err(|e| e.to_string())?;
     let listener = tokio::net::TcpListener::bind(cli.listen)
         .await
